@@ -100,8 +100,8 @@ export function Segmented<T extends string | number>({ value, options, onChange,
             role="radio"
             aria-checked={active}
             onClick={() => onChange(option.value)}
-            className={`min-h-9 flex-1 rounded-full px-3 text-sm transition-colors ${
-              active ? 'bg-white font-medium text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100' : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'
+            className={`min-h-9 flex-1 rounded-full px-3 text-sm font-medium transition-colors ${
+              active ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100' : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
             }`}
           >
             {option.label}

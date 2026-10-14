@@ -17,7 +17,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p .",
     "assets:brand": "tsx scripts/generate-brand-assets.ts",
-    "screenshots": "tsx scripts/screenshots.ts"
+    "screenshots": "tsx scripts/screenshots.ts",
+    "check:layout": "tsx scripts/check-layout.ts"
   },
   "repository": {
     "type": "git",

@@ -1,10 +1,11 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { BOT_LEVEL_NAMES, BOT_LEVELS, type BotLevel } from '../../shared/bot'
 import type { Player } from '../../shared/hex'
 
-/** The fixed-height strip above the board, so the board never jumps. */
+/** The fixed-height strip above the board. Keep its contents the same width as the game goes on. */
 export function Hud({ children, actions }: { children: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="flex h-12 shrink-0 items-center justify-between gap-2">
+    <div className="flex h-full items-center justify-between gap-2">
       <div className="flex min-w-0 flex-1 items-center gap-1">{children}</div>
       {actions && <div className="flex shrink-0 items-center gap-0.5">{actions}</div>}
     </div>
@@ -33,24 +34,22 @@ interface PlayerTagProps {
   player: Player
   name: string
   active: boolean
-  thinking?: boolean
   /** false shows a hollow "offline" marker. */
   online?: boolean
 }
 
-/** A player's color and name; the one to move is raised like the active mode tab. */
-export function PlayerTag({ player, name, active, thinking, online }: PlayerTagProps) {
+/** A player's color and name; the one to move is raised like the active mode tab (same weight, so no reflow). */
+export function PlayerTag({ player, name, active, online }: PlayerTagProps) {
   return (
     <span
       data-player-tag={player}
       data-active={active}
-      className={`flex h-8 min-w-0 items-center gap-1.5 rounded-full px-2.5 text-sm transition-colors ${
-        active ? 'bg-white font-medium text-neutral-900 shadow-sm dark:bg-neutral-800 dark:text-neutral-100' : 'text-neutral-500 dark:text-neutral-400'
+      className={`flex h-8 min-w-0 items-center gap-1.5 rounded-full px-2.5 text-sm font-medium transition-colors ${
+        active ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-800 dark:text-neutral-100' : 'text-neutral-400 dark:text-neutral-500'
       }`}
     >
       <Stone player={player} />
       <span className="truncate">{name}</span>
-      {thinking && <ThinkingDots />}
       {online === false && (
         <span title="Offline" className="h-2 w-2 shrink-0 rounded-full border border-neutral-400 dark:border-neutral-500">
           <span className="sr-only">(offline)</span>
@@ -61,13 +60,42 @@ export function PlayerTag({ player, name, active, thinking, online }: PlayerTagP
   )
 }
 
-/** The result line that replaces the player tags when the game ends. */
-export function Result({ winner, text }: { winner: Player; text: string }) {
+/** The result under the board when the game ends, with its follow-up action. */
+export function Result({ winner, text, children }: { winner: Player; text: string; children?: ReactNode }) {
   return (
-    <span role="status" className="flex min-w-0 items-center gap-2 pl-1 text-base font-semibold tracking-tight">
-      <Stone player={winner} className="h-4 w-4" />
-      <span className="truncate">{text}</span>
-    </span>
+    <div role="status" className="flex min-h-11 items-center gap-3">
+      <span className="flex items-center gap-2 text-base font-semibold tracking-tight">
+        <Stone player={winner} className="h-4 w-4" />
+        {text}
+      </span>
+      {children}
+    </div>
+  )
+}
+
+/** Easy / Medium / Hard, always on screen against the computer. */
+export function LevelPicker({ value, onChange }: { value: BotLevel; onChange: (level: BotLevel) => void }) {
+  return (
+    <div role="radiogroup" aria-label="Computer strength" className="grid grid-cols-3 rounded-full bg-neutral-200/70 p-1 dark:bg-neutral-800">
+      {BOT_LEVELS.map(level => {
+        const active = level === value
+        return (
+          <button
+            key={level}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            data-level={level}
+            onClick={() => onChange(level)}
+            className={`h-8 rounded-full px-3 text-sm font-medium transition-colors sm:px-4 ${
+              active ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100' : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
+            }`}
+          >
+            {BOT_LEVEL_NAMES[level]}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 

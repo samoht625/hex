@@ -1,20 +1,13 @@
 /**
- * Board geometry in SVG units, where a hex has radius 1.
- *
- * The classic layout is the familiar leaning rhombus: each row shifted half a
- * cell to the right. On tall screens the same board is turned 60° so its long
- * diagonal runs top to bottom; hexes keep their pointy tops (they are
- * symmetric under 60° turns) and the cells come out much larger on phones.
+ * Board geometry in SVG units, where a hex has radius 1: the familiar leaning
+ * rhombus, each row shifted half a cell to the right.
  */
 
 const SQRT3 = Math.sqrt(3)
 type Point = [number, number]
 
-export type Orientation = 'classic' | 'tall'
-
 export interface BoardLayout {
   size: number
-  orientation: Orientation
   /** Cell centers, already shifted into the view box. */
   centers: Point[]
   /** Points attribute for each cell's hexagon. */
@@ -34,21 +27,13 @@ const HEX_VERTICES: Point[] = Array.from({ length: 6 }, (_, k) => {
 const fmt = (n: number) => Math.round(n * 1000) / 1000
 const pointsAttr = (points: Point[]) => points.map(([x, y]) => `${fmt(x)},${fmt(y)}`).join(' ')
 
-const cache = new Map<string, BoardLayout>()
+const cache = new Map<number, BoardLayout>()
 
-export function boardLayout(size: number, orientation: Orientation): BoardLayout {
-  const key = `${size}:${orientation}`
-  const cached = cache.get(key)
+export function boardLayout(size: number): BoardLayout {
+  const cached = cache.get(size)
   if (cached) return cached
 
-  const angle = orientation === 'tall' ? Math.PI / 3 : 0
-  const cos = Math.cos(angle)
-  const sin = Math.sin(angle)
-  const place = (r: number, c: number): Point => {
-    const x = SQRT3 * (c + r / 2)
-    const y = 1.5 * r
-    return [x * cos - y * sin, x * sin + y * cos]
-  }
+  const place = (r: number, c: number): Point => [SQRT3 * (c + r / 2), 1.5 * r]
 
   const rawCenters: Point[] = []
   for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) rawCenters.push(place(r, c))
@@ -77,17 +62,7 @@ export function boardLayout(size: number, orientation: Orientation): BoardLayout
     ['blue', pointsAttr([m, t, p])]
   ]
 
-  const layout = { size, orientation, centers, hexes, edges, width, height }
-  cache.set(key, layout)
+  const layout = { size, centers, hexes, edges, width, height }
+  cache.set(size, layout)
   return layout
-}
-
-/** Picks the orientation that gives the biggest cells in a box of w × h pixels. */
-export function bestOrientation(size: number, w: number, h: number): { layout: BoardLayout; scale: number } {
-  const classic = boardLayout(size, 'classic')
-  const tall = boardLayout(size, 'tall')
-  const classicScale = Math.min(w / classic.width, h / classic.height)
-  const tallScale = Math.min(w / tall.width, h / tall.height)
-  // The classic picture is the one people know; only turn it when that clearly helps.
-  return tallScale > classicScale * 1.12 ? { layout: tall, scale: tallScale } : { layout: classic, scale: classicScale }
 }

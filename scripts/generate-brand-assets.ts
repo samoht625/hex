@@ -36,9 +36,9 @@ function seededRandom(seed: number): () => number {
 
 function boardSvg(): string {
   // A tense late-middle game: a self-played game, a few moves before the end.
-  const finished = selfPlay(newGame({ size: 11, swapRule: true }), { level: 'normal', maxIterations: 6000, random: seededRandom(5) })
+  const finished = selfPlay(newGame({ size: 11, swapRule: true }), { level: 'medium', maxIterations: 6000, random: seededRandom(5) })
   const game = undo(finished, 5)
-  const layout = boardLayout(11, 'classic')
+  const layout = boardLayout(11)
   const fill = (cell: number) => (game.board[cell] === 1 ? RED : game.board[cell] === 2 ? BLUE : '#ffffff')
   const edges = layout.edges.map(([owner, points]) => `<polygon points="${points}" fill="${owner === 'red' ? RED : BLUE}" stroke="${owner === 'red' ? RED : BLUE}" stroke-width="0.02" stroke-linejoin="round"/>`).join('')
   const cells = layout.hexes

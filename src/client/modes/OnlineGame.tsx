@@ -4,7 +4,7 @@ import { normalizeRoomCode, ROOM_CODE_LENGTH, ROOM_CODE_PATTERN, type CreateRoom
 import { Board } from '../components/Board'
 import { Field, PrimaryButton, SecondaryButton } from '../components/Dialog'
 import { GameScreen, Notice, NoticeButton } from '../components/GameScreen'
-import { Hud, IconButton, LinkIcon, PillButton, PlayerTag, Result, SwapIcon, UndoIcon } from '../components/Hud'
+import { Hud, IconButton, LinkIcon, PillButton, PlayerTag, Result, UndoIcon } from '../components/Hud'
 import { useGameMenu } from '../components/Menu'
 import { SizePicker, SwapToggle } from '../components/NewGameDialog'
 import { showToast } from '../components/Toast'
@@ -192,17 +192,6 @@ function Room({ code }: { code: string }) {
     <Hud
       actions={
         <>
-          {myTurn && game && canSwap(game) && (
-            <PillButton tone="light" onClick={() => move('swap')} title="Take Red’s first stone (swap rule)">
-              <SwapIcon />
-              Swap
-            </PillButton>
-          )}
-          {game?.winner && seat && (
-            <PillButton onClick={() => send({ t: 'rematch' })} disabled={rematchAsked} className="disabled:opacity-50">
-              {rematchAsked ? 'Waiting…' : opponentRematch ? 'Accept rematch' : 'Rematch'}
-            </PillButton>
-          )}
           {seat && (
             <IconButton label="Ask to undo" onClick={() => send({ t: 'undo' })} disabled={myMoveCount === 0 || room?.undoRequest === seat}>
               <UndoIcon />
@@ -216,17 +205,15 @@ function Room({ code }: { code: string }) {
     >
       {!room || !game ? (
         <span className="pl-1 text-sm text-neutral-500">Connecting…</span>
-      ) : game.winner ? (
-        <Result winner={game.winner} text={resultText} />
       ) : seat ? (
         <>
-          <PlayerTag player={seat} name="You" active={game.toMove === seat} />
-          <PlayerTag player={opponent!} name="Friend" active={game.toMove === opponent} online={room.players[opponent!].taken ? room.players[opponent!].online : undefined} />
+          <PlayerTag player={seat} name="You" active={!game.winner && game.toMove === seat} />
+          <PlayerTag player={opponent!} name="Friend" active={!game.winner && game.toMove === opponent} online={room.players[opponent!].taken ? room.players[opponent!].online : undefined} />
         </>
       ) : (
         <>
-          <PlayerTag player="red" name="Red" active={game.toMove === 'red'} online={room.players.red.online} />
-          <PlayerTag player="blue" name="Blue" active={game.toMove === 'blue'} online={room.players.blue.online} />
+          <PlayerTag player="red" name="Red" active={!game.winner && game.toMove === 'red'} online={room.players.red.online} />
+          <PlayerTag player="blue" name="Blue" active={!game.winner && game.toMove === 'blue'} online={room.players.blue.online} />
           <span className="truncate pl-1 text-xs text-neutral-500">Watching</span>
         </>
       )}
@@ -257,16 +244,31 @@ function Room({ code }: { code: string }) {
     )
   } else if (room && seat && room.undoRequest === seat) {
     notice = <Notice><span>Asked your friend to undo…</span></Notice>
-  } else if (game?.winner && opponentRematch && !rematchAsked) {
-    notice = <Notice><span>Your friend wants a rematch. Colors switch, so Red moves first.</span></Notice>
+  } else if (game?.winner) {
+    notice = (
+      <Result winner={game.winner} text={resultText}>
+        {seat && (
+          <PillButton onClick={() => send({ t: 'rematch' })} disabled={rematchAsked} className="disabled:opacity-50" title={opponentRematch ? 'Your friend wants a rematch. Colors switch.' : 'Colors switch for the rematch'}>
+            {rematchAsked ? 'Waiting…' : opponentRematch ? 'Accept rematch' : 'Rematch'}
+          </PillButton>
+        )}
+      </Result>
+    )
   } else if (room && opponent && room.players[opponent].taken && !room.players[opponent].online && !game?.winner) {
     notice = <Notice><span>Your friend is offline. They can come back with the same link.</span></Notice>
   } else if (myTurn && game && canSwap(game)) {
-    notice = <Notice><span>You may <strong className="font-medium">swap</strong> to take Red’s stone, or just play.</span></Notice>
+    notice = (
+      <Notice>
+        <span title="Swap rule: take over Red’s first stone">You may swap, or just play.</span>
+        <NoticeButton primary onClick={() => move('swap')}>
+          Swap
+        </NoticeButton>
+      </Notice>
+    )
   }
 
   return (
-    <GameScreen hud={hud} notice={notice}>
+    <GameScreen size={shown.size} hud={hud} status={notice}>
       <Board
         size={shown.size}
         board={shown.board}

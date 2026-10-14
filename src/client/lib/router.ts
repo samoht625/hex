@@ -8,12 +8,12 @@ export function parseRoute(pathname: string): Route {
   const room = pathname.match(/^\/r\/([^/]+)\/?$/)
   if (room) return { mode: 'online', code: normalizeRoomCode(room[1]) }
   if (/^\/online\/?$/.test(pathname)) return { mode: 'online', code: null }
-  if (/^\/computer\/?$/.test(pathname)) return { mode: 'computer' }
-  return { mode: 'local' }
+  if (/^\/local\/?$/.test(pathname)) return { mode: 'local' }
+  return { mode: 'computer' }
 }
 
 export const pathFor = (route: Route): string =>
-  route.mode === 'local' ? '/' : route.mode === 'computer' ? '/computer' : route.code ? `/r/${route.code}` : '/online'
+  route.mode === 'computer' ? '/' : route.mode === 'local' ? '/local' : route.code ? `/r/${route.code}` : '/online'
 
 const listeners = new Set<() => void>()
 

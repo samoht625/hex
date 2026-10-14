@@ -37,7 +37,7 @@ const CONTENT_TYPES: Record<string, string> = {
 }
 
 /** Client-side routes that all render the app shell. */
-const APP_ROUTES = /^\/(?:online|computer|r\/[A-Za-z0-9]{1,12})?\/?$/
+const APP_ROUTES = /^\/(?:online|local|computer|r\/[A-Za-z0-9]{1,12})?\/?$/
 
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, ch => `&#${ch.charCodeAt(0)};`)
 

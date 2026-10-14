@@ -29,11 +29,11 @@ function seededRandom(seed: number): () => number {
 }
 
 const finishedGame = (seed: number): GameState =>
-  selfPlay(newGame({ size: 11, swapRule: true }), { level: 'normal', maxIterations: 3000, random: seededRandom(seed) })
+  selfPlay(newGame({ size: 11, swapRule: true }), { level: 'medium', maxIterations: 3000, random: seededRandom(seed) })
 
 async function seeded(browser: Browser, device: typeof DESKTOP | typeof MOBILE, key: string, game: GameState, extra: Record<string, unknown> = {}): Promise<{ context: BrowserContext; page: Page }> {
   const context = await browser.newContext(device)
-  const saved = JSON.stringify({ settings: { size: game.size, swapRule: game.swapRule, level: 'normal', humanColor: 'red', ...extra }, game: toRecord(game) })
+  const saved = JSON.stringify({ settings: { size: game.size, swapRule: game.swapRule, level: 'medium', humanColor: 'red', ...extra }, game: toRecord(game) })
   await context.addInitScript(([k, v]) => localStorage.getItem(k) === null && localStorage.setItem(k, v), [key, saved] as const)
   return { context, page: await context.newPage() }
 }
@@ -65,7 +65,7 @@ async function computerInProgress(browser: Browser, device: typeof DESKTOP | typ
   const base = undo(full, full.moves.length - Math.min(22, full.moves.length - 6))
   const position = base.toMove === 'red' ? base : undo(base)
   const { context, page } = await seeded(browser, device, 'hex:computer', position)
-  await page.goto(`${BASE_URL}/computer`)
+  await page.goto(BASE_URL)
   await waitForStones(page, await stoneCount(page), true)
   const before = await stoneCount(page)
   await playMove(page, chooseMove(position, { level: 'easy', random: seededRandom(seed) }).move)
@@ -74,11 +74,25 @@ async function computerInProgress(browser: Browser, device: typeof DESKTOP | typ
   await context.close()
 }
 
+/** First visit: the computer game with the strength and color pickers, then the new-game dialog. */
+async function pickers(browser: Browser, device: typeof DESKTOP | typeof MOBILE, name: string): Promise<void> {
+  const context = await browser.newContext(device)
+  const page = await context.newPage()
+  await page.goto(BASE_URL)
+  await page.getByRole('radiogroup', { name: 'Your color' }).waitFor()
+  await page.getByRole('radio', { name: /Hard/ }).click()
+  await shot(page, `${name}-first-visit`)
+  await page.getByRole('button', { name: 'New game', exact: true }).first().click()
+  await page.getByRole('dialog').waitFor()
+  await shot(page, `${name}-difficulty`, 400)
+  await context.close()
+}
+
 /** Pass-and-play: seed the position before the end and play the winning move. */
 async function localWon(browser: Browser, device: typeof DESKTOP | typeof MOBILE, name: string, seed: number): Promise<void> {
   const full = finishedGame(seed)
   const { context, page } = await seeded(browser, device, 'hex:local', undo(full))
-  await page.goto(BASE_URL)
+  await page.goto(`${BASE_URL}/local`)
   await page.locator('svg.hex-board[data-turn]').waitFor()
   await playMove(page, full.moves.at(-1)!)
   await page.locator('svg.hex-board[data-won="true"]').waitFor()
@@ -119,6 +133,8 @@ async function main() {
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH ?? '/usr/local/bin/google-chrome' })
   console.log(`Capturing ${BASE_URL} into ${OUT}`)
   await computerInProgress(browser, DESKTOP, 'desktop-in-progress', 7)
+  await pickers(browser, DESKTOP, 'desktop')
+  await pickers(browser, MOBILE, 'mobile')
   await localWon(browser, DESKTOP, 'desktop-won', 8)
   await onlineInProgress(browser, MOBILE, 'mobile-in-progress', 11)
   await localWon(browser, MOBILE, 'mobile-won', 5)
