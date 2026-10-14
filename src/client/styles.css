@@ -88,17 +88,6 @@ input:focus-visible {
 .hex-board[data-won="true"] .hex-cell[data-stone="1"]:not([data-path]) { fill: color-mix(in srgb, var(--red) 30%, var(--cell)); }
 .hex-board[data-won="true"] .hex-cell[data-stone="2"]:not([data-path]) { fill: color-mix(in srgb, var(--blue) 30%, var(--cell)); }
 
-.hex-cell.stone-in {
-  animation: stone-in 0.22s ease-out;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-@keyframes stone-in {
-  from { transform: scale(0.6); opacity: 0.4; }
-  to { transform: scale(1); opacity: 1; }
-}
-
 .win-path {
   stroke: var(--path);
   stroke-dasharray: 1;
@@ -114,7 +103,7 @@ input:focus-visible {
   display: none;
 }
 
-.hex-board:focus-visible .hex-cursor {
+.hex-board[data-keyboard="true"]:focus .hex-cursor {
   display: block;
 }
 

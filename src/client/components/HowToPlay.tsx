@@ -21,7 +21,7 @@ const SWAP_AFTER = parse(['.....', '.....', '.....', '.B...', '.....'])
 function MiniBoard({ board, path = [], last = null }: { board: Cell[]; path?: number[]; last?: number | null }) {
   return (
     <div className="h-24 w-full">
-      <Board size={5} board={board} winningPath={path} lastCell={last} turn={null} orientation="classic" label="Example board" />
+      <Board size={5} board={board} winningPath={path} lastCell={last} turn={null} label="Example board" />
     </div>
   )
 }
