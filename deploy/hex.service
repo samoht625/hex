@@ -1,0 +1,24 @@
+[Unit]
+Description=Hex (hex.tido.site)
+After=network.target
+
+[Service]
+Type=simple
+User=hex
+WorkingDirectory=/srv/hex
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOST=127.0.0.1
+Environment=PUBLIC_URL=https://hex.tido.site
+# Environment=UMAMI_SCRIPT_URL=https://analytics.example.com/script.js
+# Environment=UMAMI_WEBSITE_ID=00000000-0000-0000-0000-000000000000
+ExecStart=/usr/bin/node dist/server.mjs
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
