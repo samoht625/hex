@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+:root {
+  --red: #e0464e;
+  --blue: #3b6fd4;
+  --red-edge: #e0464e;
+  --blue-edge: #3b6fd4;
+  --cell: #ffffff;
+  --cell-hover-red: #f8d3d5;
+  --cell-hover-blue: #d3def6;
+  --grid: #d9d9d9;
+  --path: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --red: #ec5d64;
+    --blue: #5b8bea;
+    --red-edge: #c9474e;
+    --blue-edge: #4a75cc;
+    --cell: #2a2b2f;
+    --cell-hover-red: #4a2c30;
+    --cell-hover-blue: #2c3753;
+    --grid: #17181b;
+    --path: #ffffff;
+  }
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  color-scheme: light dark;
+  /* Double-tap never zooms; pinch still can. */
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  overscroll-behavior: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+}
+
+/* ---- Board ---- */
+
+.hex-board {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  outline: none;
+}
+
+.hex-cell {
+  fill: var(--cell);
+  transition: fill 0.15s ease;
+}
+
+.hex-cell[data-stone="1"] { fill: var(--red); }
+.hex-cell[data-stone="2"] { fill: var(--blue); }
+
+.hex-board[data-interactive="true"] .hex-cell[data-stone="0"] {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .hex-board[data-interactive="true"][data-turn="red"] .hex-cell[data-stone="0"]:hover { fill: var(--cell-hover-red); }
+  .hex-board[data-interactive="true"][data-turn="blue"] .hex-cell[data-stone="0"]:hover { fill: var(--cell-hover-blue); }
+}
+
+/* Dim everything but the winning chain. Blended, not transparent: the edge tint lies underneath. */
+.hex-board[data-won="true"] .hex-cell[data-stone="1"]:not([data-path]) { fill: color-mix(in srgb, var(--red) 30%, var(--cell)); }
+.hex-board[data-won="true"] .hex-cell[data-stone="2"]:not([data-path]) { fill: color-mix(in srgb, var(--blue) 30%, var(--cell)); }
+
+.hex-cell.stone-in {
+  animation: stone-in 0.22s ease-out;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes stone-in {
+  from { transform: scale(0.6); opacity: 0.4; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.win-path {
+  stroke: var(--path);
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw-path 0.9s ease-out 0.15s forwards;
+}
+
+@keyframes draw-path {
+  to { stroke-dashoffset: 0; }
+}
+
+.hex-cursor {
+  display: none;
+}
+
+.hex-board:focus-visible .hex-cursor {
+  display: block;
+}
+
+/* ---- Motion helpers (shared with the Set app's visual language) ---- */
+
+@keyframes menu-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-menu-in { animation: menu-in 0.12s ease-out; }
+
+@keyframes dialog-in {
+  from { transform: translateY(0.75rem) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+.animate-dialog-in { animation: dialog-in 0.2s ease-out; }
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translate(-50%, 0.5rem); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.animate-fade-in-up { animation: fade-in-up 0.18s ease-out; }
+
+@keyframes thinking {
+  0%, 80%, 100% { opacity: 0.25; }
+  40% { opacity: 1; }
+}
+.thinking-dot { animation: thinking 1.2s infinite ease-in-out; }
+.thinking-dot:nth-child(2) { animation-delay: 0.15s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.3s; }

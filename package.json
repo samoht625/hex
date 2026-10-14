@@ -1,0 +1,48 @@
+{
+  "name": "hex",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hex, the two-player connection board game — hex.tido.site",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c blue,red \"PORT=3001 tsx watch src/server/main.ts\" \"vite\"",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "vite build",
+    "build:server": "esbuild src/server/main.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/server.mjs --banner:js=\"import{createRequire}from'module';const require=createRequire(import.meta.url);\"",
+    "start": "node dist/server.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p .",
+    "assets:brand": "tsx scripts/generate-brand-assets.ts",
+    "screenshots": "tsx scripts/screenshots.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/samoht625/hex.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/ws": "^8.18.2",
+    "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^10.0.6",
+    "esbuild": "^0.28.2",
+    "playwright-core": "^1.64.0",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4"
+  }
+}
