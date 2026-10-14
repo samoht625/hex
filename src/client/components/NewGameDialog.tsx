@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { BotLevel } from '../../shared/bot'
+import { BOT_LEVEL_NAMES, BOT_LEVELS, type BotLevel } from '../../shared/bot'
 import { SIZES, type BoardSize, type Player } from '../../shared/hex'
 import { Dialog, Field, PrimaryButton, Segmented } from './Dialog'
 import { Switch } from './Menu'
@@ -12,7 +12,7 @@ export interface GameSettings {
   humanColor: Player
 }
 
-export const DEFAULT_SETTINGS: GameSettings = { size: 11, swapRule: true, level: 'normal', humanColor: 'red' }
+export const DEFAULT_SETTINGS: GameSettings = { size: 11, swapRule: true, level: 'medium', humanColor: 'red' }
 
 interface NewGameDialogProps {
   open: boolean
@@ -23,6 +23,8 @@ interface NewGameDialogProps {
   startLabel?: string
   onStart: (settings: GameSettings) => void
 }
+
+const LEVEL_HINTS: Record<BotLevel, string> = { easy: 'Good for learning', medium: 'A fair fight', hard: 'Thinks hard, plays sharp' }
 
 export function SwapToggle({ value, onChange }: { value: boolean; onChange: (value: boolean) => void }) {
   return (
@@ -69,26 +71,17 @@ export function NewGameDialog({ open, onClose, initial, vsComputer = false, titl
       </Field>
       {vsComputer && (
         <>
-          <Field label="Computer">
-            <Segmented
-              label="Computer strength"
-              value={settings.level}
-              onChange={level => update({ level })}
-              options={[
-                { value: 'easy', label: 'Easy' },
-                { value: 'normal', label: 'Normal' },
-                { value: 'hard', label: 'Hard' }
-              ]}
-            />
+          <Field label="Difficulty" hint={LEVEL_HINTS[settings.level]}>
+            <Segmented label="Computer strength" value={settings.level} onChange={level => update({ level })} options={BOT_LEVELS.map(level => ({ value: level, label: BOT_LEVEL_NAMES[level] }))} />
           </Field>
-          <Field label="You play" hint="Red moves first">
+          <Field label="You play" hint={settings.humanColor === 'red' ? 'You move first' : 'The computer moves first'}>
             <Segmented
               label="Your color"
               value={settings.humanColor}
               onChange={humanColor => update({ humanColor })}
               options={[
-                { value: 'red', label: 'Red' },
-                { value: 'blue', label: 'Blue' }
+                { value: 'red', label: 'Red · first' },
+                { value: 'blue', label: 'Blue · second' }
               ]}
             />
           </Field>

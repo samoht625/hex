@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toBotLevel, type BotLevel } from '../../shared/bot'
 import { canSwap, fromRecord, newGame, play, toRecord, undo, type GameRecord, type GameState, type Move, type Player } from '../../shared/hex'
 import { Board } from '../components/Board'
-import { GameScreen, Notice } from '../components/GameScreen'
-import { Hud, IconButton, NewGameIcon, PillButton, PlayerTag, Result, SwapIcon, UndoIcon } from '../components/Hud'
+import { GameScreen, Notice, NoticeButton, StatusLine } from '../components/GameScreen'
+import { Hud, IconButton, LevelPicker, NewGameIcon, PillButton, PlayerTag, Result, Stone, ThinkingDots, UndoIcon } from '../components/Hud'
 import { useGameMenu } from '../components/Menu'
 import { DEFAULT_SETTINGS, NewGameDialog, type GameSettings } from '../components/NewGameDialog'
 import { track } from '../lib/analytics'
@@ -15,11 +16,10 @@ interface Saved {
   game: GameRecord
 }
 
-const LEVEL_NAMES = { easy: 'Easy', normal: 'Normal', hard: 'Hard' } as const
-
 function restore(key: string): { settings: GameSettings; game: GameState } {
   const saved = load<Partial<Saved> | null>(key, null)
   const settings = { ...DEFAULT_SETTINGS, ...saved?.settings }
+  settings.level = toBotLevel(settings.level)
   const game = (saved?.game && fromRecord(saved.game)) || newGame(settings)
   return { settings, game }
 }
@@ -82,59 +82,84 @@ export function LocalGame({ vsComputer }: { vsComputer: boolean }) {
     track('new-game', { mode: vsComputer ? 'computer' : 'local', size: next.size, swap: next.swapRule, ...(vsComputer ? { level: next.level, color: next.humanColor } : {}) })
   }
 
+  const changeLevel = (level: BotLevel) => {
+    if (level === settings.level) return
+    setSettings(current => ({ ...current, level }))
+    track('level', { level })
+  }
+
   useGameMenu([
     { label: 'New game…', onSelect: () => setDialogOpen(true) },
     { label: 'Undo', onSelect: takeBack, disabled: !canUndo }
   ])
 
   const swapAvailable = canSwap(game) && humanCanMove
-  const name = (player: Player) => (human === null ? (player === 'red' ? 'Red' : 'Blue') : player === human ? 'You' : `Computer · ${LEVEL_NAMES[settings.level]}`)
-  const resultText = game.winner ? (human === null ? `${name(game.winner)} wins` : game.winner === human ? 'You win!' : 'The computer wins') : ''
+  const resultText = game.winner ? (human === null ? `${game.winner === 'red' ? 'Red' : 'Blue'} wins` : game.winner === human ? 'You win!' : 'The computer wins') : ''
 
   const hud = (
     <Hud
       actions={
         <>
-          {swapAvailable && (
-            <PillButton tone="light" onClick={() => apply('swap')} title="Take Red’s first stone (swap rule)">
-              <SwapIcon />
-              Swap
-            </PillButton>
-          )}
-          {game.winner && <PillButton onClick={() => setDialogOpen(true)}>New game</PillButton>}
           <IconButton label="Undo" onClick={takeBack} disabled={!canUndo}>
             <UndoIcon />
           </IconButton>
-          {!game.winner && (
-            <IconButton label="New game" onClick={() => setDialogOpen(true)}>
-              <NewGameIcon />
-            </IconButton>
-          )}
+          <IconButton label="New game" onClick={() => setDialogOpen(true)}>
+            <NewGameIcon />
+          </IconButton>
         </>
       }
     >
-      {game.winner ? (
-        <Result winner={game.winner} text={resultText} />
+      {vsComputer ? (
+        <LevelPicker value={settings.level} onChange={changeLevel} />
       ) : (
         <>
-          <PlayerTag player="red" name={name('red')} active={game.toMove === 'red'} thinking={thinking && botColor === 'red'} />
-          <PlayerTag player="blue" name={name('blue')} active={game.toMove === 'blue'} thinking={thinking && botColor === 'blue'} />
+          <PlayerTag player="red" name="Red" active={!game.winner && game.toMove === 'red'} />
+          <PlayerTag player="blue" name="Blue" active={!game.winner && game.toMove === 'blue'} />
         </>
       )}
     </Hud>
   )
 
-  const notice = swapAvailable && game.moves.length === 1 ? (
-    <Notice>
-      <span>
-        {human ? 'You' : 'Blue'} may <strong className="font-medium">swap</strong> to take Red’s stone, or just play.
-      </span>
-    </Notice>
-  ) : null
+  let status: React.ReactNode = null
+  if (game.winner) {
+    status = (
+      <Result winner={game.winner} text={resultText}>
+        <PillButton onClick={() => setDialogOpen(true)}>New game</PillButton>
+      </Result>
+    )
+  } else if (swapAvailable) {
+    status = (
+      <Notice>
+        <span title="Swap rule: take over Red’s first stone">{human ? 'You' : 'Blue'} may swap, or just play.</span>
+        <NoticeButton primary onClick={() => apply('swap')}>
+          Swap
+        </NoticeButton>
+      </Notice>
+    )
+  } else if (human && botColor) {
+    if (humanMoves === 0) {
+      status = <ColorChoice value={human} onChange={humanColor => start({ ...settings, humanColor })} />
+    } else if (thinking) {
+      status = (
+        <StatusLine>
+          <Stone player={botColor} />
+          Computer is thinking
+          <ThinkingDots />
+        </StatusLine>
+      )
+    } else {
+      status = (
+        <StatusLine>
+          <Stone player={human} />
+          Your move
+        </StatusLine>
+      )
+    }
+  }
 
   return (
     <>
-      <GameScreen hud={hud} notice={notice}>
+      <GameScreen size={game.size} hud={hud} status={status}>
         <Board
           size={game.size}
           board={game.board}
@@ -142,10 +167,40 @@ export function LocalGame({ vsComputer }: { vsComputer: boolean }) {
           winningPath={game.winningPath}
           turn={humanCanMove ? game.toMove : null}
           onPlay={cell => apply(cell)}
-          label={`Hex board, ${game.size} by ${game.size}. ${game.winner ? resultText : `${name(game.toMove)} to move.`}`}
+          label={`Hex board, ${game.size} by ${game.size}. ${game.winner ? resultText : human === null ? `${game.toMove === 'red' ? 'Red' : 'Blue'} to move.` : humanCanMove ? 'Your move.' : 'The computer is thinking.'}`}
         />
       </GameScreen>
       <NewGameDialog open={dialogOpen} onClose={() => setDialogOpen(false)} initial={settings} vsComputer={vsComputer} onStart={start} />
     </>
+  )
+}
+
+/** Before your first stone: pick a side. Red moves first. */
+function ColorChoice({ value, onChange }: { value: Player; onChange: (color: Player) => void }) {
+  const option = (color: Player, label: string) => {
+    const active = color === value
+    return (
+      <button
+        type="button"
+        role="radio"
+        aria-checked={active}
+        onClick={() => !active && onChange(color)}
+        className={`flex h-8 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors ${
+          active ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100' : 'text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
+        }`}
+      >
+        <Stone player={color} />
+        {label}
+      </button>
+    )
+  }
+  return (
+    <div className="flex min-h-11 items-center gap-2.5 text-sm text-neutral-500 dark:text-neutral-400">
+      <span>You play</span>
+      <div role="radiogroup" aria-label="Your color" className="grid grid-cols-2 rounded-full bg-neutral-200/70 p-1 dark:bg-neutral-800">
+        {option('red', 'Red · first')}
+        {option('blue', 'Blue · second')}
+      </div>
+    </div>
   )
 }

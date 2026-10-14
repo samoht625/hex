@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Header } from './components/Header'
 import { HowToPlay } from './components/HowToPlay'
 import { GameMenuProvider } from './components/Menu'
@@ -5,9 +6,20 @@ import { Toast } from './components/Toast'
 import { LocalGame } from './modes/LocalGame'
 import { OnlineGame } from './modes/OnlineGame'
 import { navigate, useRoute, type Mode } from './lib/router'
+import { load, save } from './lib/storage'
+
+const MODE_KEY = 'hex:mode'
 
 export function App() {
   const route = useRoute()
+
+  // First visits start against the computer; after that, "/" reopens the last offline mode.
+  useEffect(() => {
+    if (location.pathname === '/' && load<string>(MODE_KEY, 'computer') === 'local') navigate({ mode: 'local' }, true)
+  }, [])
+  useEffect(() => {
+    if (route.mode !== 'online') save(MODE_KEY, route.mode)
+  }, [route.mode])
 
   const switchMode = (mode: Mode) => {
     if (mode === route.mode) return
