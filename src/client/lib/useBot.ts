@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import type { BotLevel, SearchResult } from '../../shared/bot'
 import { toRecord, type GameState, type Move } from '../../shared/hex'
 import type { BotRequest } from '../bot.worker'
@@ -12,11 +12,10 @@ let nextId = 1
  * Asks the bot (in a web worker) for a move whenever `active` is true, and
  * calls `onMove` with it and the move count it was computed for.
  */
-export function useBot(game: GameState, active: boolean, level: BotLevel, onMove: (move: Move, ply: number) => void): boolean {
+export function useBot(game: GameState, active: boolean, level: BotLevel, onMove: (move: Move, ply: number) => void): void {
   const workerRef = useRef<Worker | null>(null)
   const onMoveRef = useRef(onMove)
   onMoveRef.current = onMove
-  const [thinking, setThinking] = useState(false)
 
   useEffect(() => () => workerRef.current?.terminate(), [])
 
@@ -29,15 +28,11 @@ export function useBot(game: GameState, active: boolean, level: BotLevel, onMove
     const ply = game.moves.length
     let answered = false
     let timer: ReturnType<typeof setTimeout> | undefined
-    setThinking(true)
 
     const onMessage = (event: MessageEvent<SearchResult & { id: number }>) => {
       if (event.data.id !== id) return
       answered = true
-      timer = setTimeout(() => {
-        setThinking(false)
-        onMoveRef.current(event.data.move, ply)
-      }, Math.max(0, MIN_DELAY_MS - (performance.now() - started)))
+      timer = setTimeout(() => onMoveRef.current(event.data.move, ply), Math.max(0, MIN_DELAY_MS - (performance.now() - started)))
     }
     worker.addEventListener('message', onMessage)
     worker.postMessage({ id, record: toRecord(game), level } satisfies BotRequest)
@@ -45,7 +40,6 @@ export function useBot(game: GameState, active: boolean, level: BotLevel, onMove
     return () => {
       worker.removeEventListener('message', onMessage)
       clearTimeout(timer)
-      setThinking(false)
       if (!answered) {
         // Stop a long search for a position that no longer exists.
         worker.terminate()
@@ -53,6 +47,4 @@ export function useBot(game: GameState, active: boolean, level: BotLevel, onMove
       }
     }
   }, [active, game, level])
-
-  return thinking
 }

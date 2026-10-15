@@ -333,11 +333,23 @@ function edgeDistance(cell: number, size: number): number {
   return Math.min(r, c, size - 1 - r, size - 1 - c)
 }
 
-/** Should Blue swap Red's opening stone? Central stones are too strong to leave to Red. */
+/** Steps between two cells on the hex grid. */
+function hexDistance(a: number, b: number, size: number): number {
+  const dr = Math.floor(a / size) - Math.floor(b / size)
+  const dc = (a % size) - (b % size)
+  return Math.max(Math.abs(dr), Math.abs(dc), Math.abs(dr + dc))
+}
+
+/**
+ * Should Blue swap Red's opening stone? Only Hard does, and only for a strong
+ * opening close to the center (2 steps on 9×9 and 11×11, 3 on 13×13): a casual
+ * player's first stone should stay theirs on Easy and Medium.
+ */
 export function shouldSwap(state: GameState, level: BotLevel): boolean {
-  if (!canSwap(state)) return false
+  if (level !== 'hard' || !canSwap(state)) return false
   const first = state.moves[0] as number
-  return edgeDistance(first, state.size) >= (level === 'easy' ? 2 : 1)
+  const center = Math.floor(state.size / 2) * state.size + Math.floor(state.size / 2)
+  return hexDistance(first, center, state.size) <= Math.floor((state.size - 1) / 4)
 }
 
 /** A modest first move for when the opponent may swap: near an edge, away from the corners. */

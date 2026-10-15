@@ -40,13 +40,32 @@ describe('bot', () => {
     expect(chooseMove(state, { level: 'medium', maxIterations: 3000 }).move).toBe(at(9, 4, 4))
   })
 
-  it('swaps a strong central opening but not a weak corner one', () => {
+  it('never swaps your first stone on Easy or Medium', () => {
+    for (const size of [9, 11, 13]) {
+      for (let cell = 0; cell < size * size; cell++) {
+        const opened = play(newGame({ size, swapRule: true }), cell)
+        expect(shouldSwap(opened, 'easy')).toBe(false)
+        expect(shouldSwap(opened, 'medium')).toBe(false)
+      }
+    }
+    // The bug: playing Red against Medium, the center stone turned Blue.
     const center = play(newGame({ size: 11, swapRule: true }), at(11, 5, 5))
-    const corner = play(newGame({ size: 11, swapRule: true }), at(11, 0, 0))
-    expect(shouldSwap(center, 'medium')).toBe(true)
-    expect(chooseMove(center, { level: 'medium' }).move).toBe('swap')
-    expect(shouldSwap(corner, 'medium')).toBe(false)
-    expect(chooseMove(corner, { level: 'medium', maxIterations: 200 }).move).not.toBe('swap')
+    for (const level of ['easy', 'medium'] as const) {
+      const { move } = chooseMove(center, { level, maxIterations: 200 })
+      expect(move).not.toBe('swap')
+      const reply = play(center, move)
+      expect(reply.board[at(11, 5, 5)]).toBe(1)
+      expect(reply.toMove).toBe('red')
+    }
+  })
+
+  it('swaps on Hard only for a strong central opening', () => {
+    const opened = (r: number, c: number) => play(newGame({ size: 11, swapRule: true }), at(11, r, c))
+    expect(chooseMove(opened(5, 5), { level: 'hard' }).move).toBe('swap')
+    for (const [r, c] of [[4, 6], [3, 5], [6, 3]]) expect(shouldSwap(opened(r, c), 'hard')).toBe(true)
+    for (const [r, c] of [[0, 0], [1, 5], [3, 3], [7, 7], [9, 2], [5, 10]]) expect(shouldSwap(opened(r, c), 'hard')).toBe(false)
+    expect(chooseMove(opened(0, 0), { level: 'hard', maxIterations: 200 }).move).not.toBe('swap')
+    expect(shouldSwap({ ...opened(5, 5), swapRule: false }, 'hard')).toBe(false)
   })
 
   it('opens near the edge when the opponent may swap, in the center otherwise', () => {

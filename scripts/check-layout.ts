@@ -111,14 +111,36 @@ async function vsComputer(browser: Browser, device: Device, color: 'red' | 'blue
   for (let move = 0; move < 8; move++) {
     await waitForMyTurn(page)
     const count = await stones(page)
-    await tapCell(page, device, await freeCell(page, 11))
+    const cell = await freeCell(page, 11)
+    await tapCell(page, device, cell)
     await page.waitForTimeout(60)
     await watch.check(`stone ${count + 1}, at once`)
     await page.waitForTimeout(300)
     await watch.check(`stone ${count + 1}, while the computer thinks`)
     await waitForMyTurn(page)
     await watch.check(`reply to stone ${count + 1}`)
+    const stone = await page.locator(`[data-cell="${cell}"]`).getAttribute('data-stone')
+    if (stone !== (color === 'red' ? '1' : '2')) failures.push(`${device}, vs computer as ${color}: stone ${count + 1} at cell ${cell} did not stick (now ${stone})`)
   }
+  await page.context().close()
+}
+
+/** On Hard, a central first stone is swapped: the board shows it as Blue and says so. */
+async function computerSwap(browser: Browser, device: Device): Promise<void> {
+  const page = await newPage(browser, device, '/')
+  await page.getByRole('radio', { name: 'Hard' }).click()
+  const watch = new Watcher(page, `${device}, computer swaps`)
+  await watch.start()
+  const center = 5 * 11 + 5
+  await tapCell(page, device, center)
+  await waitForMyTurn(page)
+  await watch.check('swap')
+  if ((await page.locator(`[data-cell="${center}"]`).getAttribute('data-stone')) !== '2') failures.push(`${device}, computer swaps: the center stone is not Blue`)
+  if (!(await page.getByText('Computer swapped').isVisible())) failures.push(`${device}, computer swaps: no notice shown`)
+  await tapCell(page, device, await freeCell(page, 11))
+  await page.waitForTimeout(60)
+  await watch.check('after the swap')
+  if (await page.getByText('Computer swapped').isVisible()) failures.push(`${device}, computer swaps: notice still shown after the next move`)
   await page.context().close()
 }
 
@@ -174,6 +196,7 @@ try {
     console.log(`${device}…`)
     await vsComputer(browser, device, 'red')
     await vsComputer(browser, device, 'blue')
+    await computerSwap(browser, device)
     await passAndPlay(browser, device)
   }
   console.log('online…')
