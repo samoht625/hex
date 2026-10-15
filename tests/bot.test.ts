@@ -148,21 +148,23 @@ describe('bot', () => {
     expect(internals.saveReply(right, 1, at(9, 4, 8), geo, Math.random)).toBe(-1)
   })
 
-  it('gets stronger with each level', () => {
-    const match = (strong: BotLevel, weak: BotLevel, budget: [number, number], games: number) => {
+  describe('gets stronger with each level', () => {
+    /** Easy and Medium play at their real strength; Hard gets a playout cap well under what 3 seconds buys. */
+    const match = (strong: BotLevel, weak: BotLevel, games: number, size = 9) => {
       let wins = 0
       for (let game = 0; game < games; game++) {
         const strongColor = game % 2 === 0 ? 'red' : 'blue'
         const random = seeded(game + 1)
-        let state = play(newGame({ size: 9, swapRule: false }), at(9, 2 + (game % 5), 3 + (game % 3)))
+        let state = play(newGame({ size, swapRule: false }), at(size, 2 + (game % 5), 3 + (game % 3)))
         while (!state.winner) {
           const level = state.toMove === strongColor ? strong : weak
-          state = play(state, chooseMove(state, { level, maxIterations: level === strong ? budget[0] : budget[1], timeMs: 1e9, random }).move)
+          state = play(state, chooseMove(state, { level, timeMs: 1e9, random, ...(level === 'hard' ? { maxIterations: 10_000 } : {}) }).move)
         }
         if (state.winner === strongColor) wins++
       }
       return wins
     }
-    expect(match('medium', 'easy', [3000, 300], 4)).toBe(4)
+    it('Medium beats Easy', () => expect(match('medium', 'easy', 6)).toBeGreaterThanOrEqual(5))
+    it('Hard beats Medium', () => expect(match('hard', 'medium', 6)).toBeGreaterThanOrEqual(5), 60_000)
   })
 })

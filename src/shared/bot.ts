@@ -42,7 +42,8 @@ interface LevelConfig {
 
 const LEVELS: Record<BotLevel, LevelConfig> = {
   easy: { timeMs: 150, maxIterations: 300, temperature: 1, tactics: false, knowledge: false },
-  medium: { timeMs: 800, maxIterations: Infinity, temperature: 0, tactics: true, knowledge: true },
+  // A beatable step up from Easy: a few hundred playouts and a looser pick, so it slips now and then.
+  medium: { timeMs: 500, maxIterations: 800, temperature: 0.6, tactics: true, knowledge: true },
   hard: { timeMs: 3000, maxIterations: Infinity, temperature: 0, tactics: true, knowledge: true }
 }
 
