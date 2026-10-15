@@ -50,7 +50,7 @@ export function LocalGame({ vsComputer }: { vsComputer: boolean }) {
     playStone()
   }, [])
 
-  const thinking = useBot(game, botTurn, settings.level, apply)
+  useBot(game, botTurn, settings.level, apply)
 
   // Celebrate once per finished game.
   const announced = useRef(game.winner !== null)
@@ -94,6 +94,7 @@ export function LocalGame({ vsComputer }: { vsComputer: boolean }) {
   ])
 
   const swapAvailable = canSwap(game) && humanCanMove
+  const computerSwapped = botColor === 'blue' && game.moves.length === 2 && game.moves[1] === 'swap'
   const resultText = game.winner ? (human === null ? `${game.winner === 'red' ? 'Red' : 'Blue'} wins` : game.winner === human ? 'You win!' : 'The computer wins') : ''
 
   const hud = (
@@ -136,10 +137,19 @@ export function LocalGame({ vsComputer }: { vsComputer: boolean }) {
         </NoticeButton>
       </Notice>
     )
+  } else if (computerSwapped) {
+    status = (
+      <Notice>
+        <span className="flex items-center gap-2" title="Swap rule: the computer took your first stone, mirrored across the board">
+          <Stone player="blue" />
+          Computer swapped · Your move
+        </span>
+      </Notice>
+    )
   } else if (human && botColor) {
     if (humanMoves === 0) {
       status = <ColorChoice value={human} onChange={humanColor => start({ ...settings, humanColor })} />
-    } else if (thinking) {
+    } else if (botTurn) {
       status = (
         <StatusLine>
           <Stone player={botColor} />

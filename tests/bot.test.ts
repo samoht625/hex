@@ -40,13 +40,32 @@ describe('bot', () => {
     expect(chooseMove(state, { level: 'medium', maxIterations: 3000 }).move).toBe(at(9, 4, 4))
   })
 
-  it('swaps a strong central opening but not a weak corner one', () => {
+  it('never swaps your first stone on Easy or Medium', () => {
+    for (const size of [9, 11, 13]) {
+      for (let cell = 0; cell < size * size; cell++) {
+        const opened = play(newGame({ size, swapRule: true }), cell)
+        expect(shouldSwap(opened, 'easy')).toBe(false)
+        expect(shouldSwap(opened, 'medium')).toBe(false)
+      }
+    }
+    // The bug: playing Red against Medium, the center stone turned Blue.
     const center = play(newGame({ size: 11, swapRule: true }), at(11, 5, 5))
-    const corner = play(newGame({ size: 11, swapRule: true }), at(11, 0, 0))
-    expect(shouldSwap(center, 'medium')).toBe(true)
-    expect(chooseMove(center, { level: 'medium' }).move).toBe('swap')
-    expect(shouldSwap(corner, 'medium')).toBe(false)
-    expect(chooseMove(corner, { level: 'medium', maxIterations: 200 }).move).not.toBe('swap')
+    for (const level of ['easy', 'medium'] as const) {
+      const { move } = chooseMove(center, { level, maxIterations: 200 })
+      expect(move).not.toBe('swap')
+      const reply = play(center, move)
+      expect(reply.board[at(11, 5, 5)]).toBe(1)
+      expect(reply.toMove).toBe('red')
+    }
+  })
+
+  it('swaps on Hard only for a strong central opening', () => {
+    const opened = (r: number, c: number) => play(newGame({ size: 11, swapRule: true }), at(11, r, c))
+    expect(chooseMove(opened(5, 5), { level: 'hard' }).move).toBe('swap')
+    for (const [r, c] of [[4, 6], [3, 5], [6, 3]]) expect(shouldSwap(opened(r, c), 'hard')).toBe(true)
+    for (const [r, c] of [[0, 0], [1, 5], [3, 3], [7, 7], [9, 2], [5, 10]]) expect(shouldSwap(opened(r, c), 'hard')).toBe(false)
+    expect(chooseMove(opened(0, 0), { level: 'hard', maxIterations: 200 }).move).not.toBe('swap')
+    expect(shouldSwap({ ...opened(5, 5), swapRule: false }, 'hard')).toBe(false)
   })
 
   it('opens near the edge when the opponent may swap, in the center otherwise', () => {
@@ -129,21 +148,23 @@ describe('bot', () => {
     expect(internals.saveReply(right, 1, at(9, 4, 8), geo, Math.random)).toBe(-1)
   })
 
-  it('gets stronger with each level', () => {
-    const match = (strong: BotLevel, weak: BotLevel, budget: [number, number], games: number) => {
+  describe('gets stronger with each level', () => {
+    /** Easy and Medium play at their real strength; Hard gets a playout cap well under what 3 seconds buys. */
+    const match = (strong: BotLevel, weak: BotLevel, games: number, size = 9) => {
       let wins = 0
       for (let game = 0; game < games; game++) {
         const strongColor = game % 2 === 0 ? 'red' : 'blue'
         const random = seeded(game + 1)
-        let state = play(newGame({ size: 9, swapRule: false }), at(9, 2 + (game % 5), 3 + (game % 3)))
+        let state = play(newGame({ size, swapRule: false }), at(size, 2 + (game % 5), 3 + (game % 3)))
         while (!state.winner) {
           const level = state.toMove === strongColor ? strong : weak
-          state = play(state, chooseMove(state, { level, maxIterations: level === strong ? budget[0] : budget[1], timeMs: 1e9, random }).move)
+          state = play(state, chooseMove(state, { level, timeMs: 1e9, random, ...(level === 'hard' ? { maxIterations: 10_000 } : {}) }).move)
         }
         if (state.winner === strongColor) wins++
       }
       return wins
     }
-    expect(match('medium', 'easy', [3000, 300], 4)).toBe(4)
+    it('Medium beats Easy', () => expect(match('medium', 'easy', 6)).toBeGreaterThanOrEqual(5))
+    it('Hard beats Medium', () => expect(match('hard', 'medium', 6)).toBeGreaterThanOrEqual(5), 60_000)
   })
 })

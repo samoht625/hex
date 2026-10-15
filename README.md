@@ -8,7 +8,8 @@ A game of Hex can never end in a draw.
 
 - **Pass & play**: two players, one device.
 - **Online**: start a game, send the link (`/r/ABCDE`), and play live on two devices.
-- **Computer**: play an MCTS bot (Easy, Normal, Hard) that runs in a web worker.
+- **Computer**: play an MCTS bot (Easy, Medium, Hard) that runs in a web worker.
+  Only Hard uses the swap rule, and only on a strong central first stone.
 - 9×9, 11×11 (default) and 13×13 boards. The swap (pie) rule is on by default and can be turned off.
 - Winning path highlighted, last-move marker, undo, keyboard play, light/dark theme,
   installable PWA, link previews.

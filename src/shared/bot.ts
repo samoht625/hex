@@ -42,7 +42,8 @@ interface LevelConfig {
 
 const LEVELS: Record<BotLevel, LevelConfig> = {
   easy: { timeMs: 150, maxIterations: 300, temperature: 1, tactics: false, knowledge: false },
-  medium: { timeMs: 800, maxIterations: Infinity, temperature: 0, tactics: true, knowledge: true },
+  // A beatable step up from Easy: a few hundred playouts and a looser pick, so it slips now and then.
+  medium: { timeMs: 500, maxIterations: 800, temperature: 0.6, tactics: true, knowledge: true },
   hard: { timeMs: 3000, maxIterations: Infinity, temperature: 0, tactics: true, knowledge: true }
 }
 
@@ -333,11 +334,23 @@ function edgeDistance(cell: number, size: number): number {
   return Math.min(r, c, size - 1 - r, size - 1 - c)
 }
 
-/** Should Blue swap Red's opening stone? Central stones are too strong to leave to Red. */
+/** Steps between two cells on the hex grid. */
+function hexDistance(a: number, b: number, size: number): number {
+  const dr = Math.floor(a / size) - Math.floor(b / size)
+  const dc = (a % size) - (b % size)
+  return Math.max(Math.abs(dr), Math.abs(dc), Math.abs(dr + dc))
+}
+
+/**
+ * Should Blue swap Red's opening stone? Only Hard does, and only for a strong
+ * opening close to the center (2 steps on 9×9 and 11×11, 3 on 13×13): a casual
+ * player's first stone should stay theirs on Easy and Medium.
+ */
 export function shouldSwap(state: GameState, level: BotLevel): boolean {
-  if (!canSwap(state)) return false
+  if (level !== 'hard' || !canSwap(state)) return false
   const first = state.moves[0] as number
-  return edgeDistance(first, state.size) >= (level === 'easy' ? 2 : 1)
+  const center = Math.floor(state.size / 2) * state.size + Math.floor(state.size / 2)
+  return hexDistance(first, center, state.size) <= Math.floor((state.size - 1) / 4)
 }
 
 /** A modest first move for when the opponent may swap: near an edge, away from the corners. */
